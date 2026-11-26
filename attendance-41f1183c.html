@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="ar" dir="rtl"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>تسجيل الحضور</title>
+<style>
+body{font-family:system-ui,"Segoe UI",Tahoma,sans-serif;margin:0;background:#f3f5f8;color:#1b2430}
+.c{max-width:420px;margin:0 auto;padding:20px}
+h1{font-size:22px;text-align:center}
+select,input{width:100%;box-sizing:border-box;font-size:18px;padding:14px;margin:8px 0;border:1px solid #c5ccd6;border-radius:10px;background:#fff}
+button{width:100%;font-size:22px;padding:20px;margin-top:14px;border:0;border-radius:14px;background:#1a7f4b;color:#fff;font-weight:700}
+button:disabled{background:#9aa5b1}
+#msg{margin-top:16px;padding:14px;border-radius:10px;font-size:18px;text-align:center;display:none}
+.ok{background:#d9f3e4}.bad{background:#fde0e0}.warn{background:#fff3cd}
+small{display:block;text-align:center;color:#667;margin-top:14px}
+</style></head><body><div class="c">
+<h1>تسجيل الحضور</h1>
+<select id="n"><option value="">اختار اسمك</option></select>
+<input id="p" type="password" inputmode="numeric" maxlength="8" placeholder="الرقم السري">
+<button id="b">سجّل حضوري</button>
+<div id="msg"></div>
+<small>لازم الموقع (GPS) يكون شغال والسماح للمتصفح بالموقع.</small>
+</div>
+<script>
+// Put your deployed Apps Script web app URL here (ends with /exec)
+var URL_="https://script.google.com/macros/s/AKfycbwb5ZZXzebr8ArnPQjg1nyJNbjuQsFWP1D1mjtxvvi78v_K6SpBWETLKdnotULDyekW/exec";
+var $=function(i){return document.getElementById(i)};
+function show(t,c){var m=$("msg");m.className=c;m.textContent=t;m.style.display="block"}
+fetch(URL_).then(function(r){return r.json()}).then(function(d){
+  d.names.forEach(function(x){var o=document.createElement("option");o.value=o.textContent=x;$("n").appendChild(o)});
+  var s=localStorage.getItem("att_name");if(s)$("n").value=s;
+}).catch(function(){show("مفيش اتصال. جرب تاني","bad")});
+$("b").onclick=function(){
+  if(!$("n").value||!$("p").value){show("اختار اسمك واكتب الرقم السري","warn");return}
+  if(!navigator.geolocation){show("المتصفح مش بيدعم الموقع","bad");return}
+  $("b").disabled=true;show("بجيب الموقع...","warn");
+  navigator.geolocation.getCurrentPosition(function(pos){
+    fetch(URL_,{method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify({
+      name:$("n").value,pin:$("p").value,lat:pos.coords.latitude,lon:pos.coords.longitude,
+      acc:pos.coords.accuracy,deviceTime:new Date().toISOString()})})
+    .then(function(r){return r.json()}).then(function(d){
+      $("b").disabled=false;
+      if(!d.ok){show(d.error,"bad");return}
+      localStorage.setItem("att_name",$("n").value);
+      if(d.already)show("اتسجلت قبل كده الساعة "+d.time,"warn");
+      else show("تم التسجيل الساعة "+d.time+" ("+d.status+")",d.status==="متأخر"?"warn":"ok");
+    }).catch(function(){$("b").disabled=false;show("فشل الإرسال. جرب تاني","bad")});
+  },function(){$("b").disabled=false;show("فعّل الموقع واسمح للمتصفح بيه وجرب تاني","bad")},
+  {enableHighAccuracy:true,timeout:20000,maximumAge:0});
+};
+</script></body></html>
